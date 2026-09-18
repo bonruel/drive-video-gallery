@@ -1,0 +1,1916 @@
+<meta charset="utf-8">
+<!--
+  Media Library - in-site Google Drive video browser
+  Paste this whole block into a GoHighLevel "Custom Code" / HTML embed element.
+  Client-side only: read-only Drive API key, no login, no backend.
+  Folders open in place (breadcrumb navigation) and every file type (video,
+  image, document, etc.) opens in an on-page modal via Drive's embeddable
+  /preview viewer - visitors never leave the page.
+
+  SECURITY NOTE: the API key below is visible to anyone who views this page's
+  source once it's live. In Google Cloud Console, restrict this key to
+  "API restrictions -> Google Drive API" and "Website restrictions -> HTTP
+  referrers" limited to your GHL domain(s) so it can't be reused elsewhere.
+-->
+<div class="dvg-root" id="dvgRoot">
+  <div class="dvg-app">
+    <nav class="dvg-nav">
+      <div class="dvg-nav-inner">
+        <div class="dvg-brand">
+          <svg viewBox="0 0 28 28" fill="none" class="dvg-brand-mark" aria-hidden="true">
+            <rect x="1" y="1" width="26" height="26" rx="8" fill="#1d1d1f"/>
+            <path d="M11 9.2v9.6c0 .74.8 1.2 1.44.82l7.7-4.8c.62-.39.62-1.27 0-1.66l-7.7-4.8c-.64-.4-1.44.08-1.44.84Z" fill="#fff"/>
+          </svg>
+          <span>Media Library</span>
+        </div>
+      </div>
+    </nav>
+
+    <main class="dvg-main">
+      <div class="dvg-breadcrumbs" id="dvgBreadcrumbs"></div>
+
+      <div class="dvg-headrow">
+        <h1 class="dvg-heading" id="dvgHeading">Craig DeBoor</h1>
+        <label class="dvg-search">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m21 21-4.34-4.34M18.5 11a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <input type="text" id="dvgSearchInput" placeholder="Search this folder" autocomplete="off" />
+        </label>
+      </div>
+
+      <div class="dvg-subrow">
+        <p class="dvg-subheading">
+          <span class="dvg-pulse" id="dvgPulse" aria-hidden="true"></span>
+          <span id="dvgUpdated">Loading&hellip;</span>
+        </p>
+        <div class="dvg-subrow-right">
+          <div class="dvg-segment" role="tablist" aria-label="Items to show">
+            <button type="button" class="dvg-segment-btn is-active" id="dvgViewRecent" role="tab" aria-selected="true">Most Recent</button>
+            <button type="button" class="dvg-segment-btn" id="dvgViewAll" role="tab" aria-selected="false">All Projects</button>
+          </div>
+          <button type="button" class="dvg-download-all" id="dvgDownloadAll" hidden>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 17.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Download all</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="dvg-category-row" id="dvgCategoryRow" role="tablist" aria-label="Filter by category">
+        <button type="button" class="dvg-chip is-active" id="dvgCatAll" data-cat="all" role="tab" aria-selected="true">All</button>
+        <button type="button" class="dvg-chip" id="dvgCatTour" data-cat="tour" role="tab" aria-selected="false">Property Tour</button>
+        <button type="button" class="dvg-chip" id="dvgCatTalking" data-cat="talking" role="tab" aria-selected="false">Talking Head</button>
+        <button type="button" class="dvg-chip" id="dvgCatTravel" data-cat="travel" role="tab" aria-selected="false">Travel Videos</button>
+      </div>
+
+      <div id="dvgError" class="dvg-error" hidden role="alert">
+        <svg class="dvg-error-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.3 2.25h17.76a1.5 1.5 0 0 0 1.3-2.25L13.71 3.86a1.5 1.5 0 0 0-2.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="dvg-error-text">
+          <p class="dvg-error-title" id="dvgErrorTitle">Something went wrong</p>
+          <p class="dvg-error-body" id="dvgErrorBody">We couldn't reach Google Drive.</p>
+        </div>
+        <button type="button" class="dvg-retry" id="dvgRetry">Retry</button>
+      </div>
+
+      <div id="dvgSkeleton" class="dvg-grid" aria-hidden="true"></div>
+
+      <div id="dvgEmpty" class="dvg-empty" hidden>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="dvg-empty-icon">
+          <path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4.379a1.5 1.5 0 0 1 1.06.44l1.122 1.12A1.5 1.5 0 0 0 12.12 8H19.5A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5v-10Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+        </svg>
+        <p id="dvgEmptyTitle">Nothing here yet</p>
+        <span id="dvgEmptyBody">New uploads will appear here automatically.</span>
+      </div>
+
+      <div id="dvgGrid" class="dvg-grid" hidden></div>
+    </main>
+  </div>
+
+  <div class="dvg-modal-overlay" id="dvgModalOverlay" hidden>
+    <div class="dvg-modal" role="dialog" aria-modal="true" aria-labelledby="dvgModalTitle">
+      <div class="dvg-modal-header">
+        <p class="dvg-modal-title" id="dvgModalTitle"></p>
+        <div class="dvg-modal-actions">
+          <a class="dvg-modal-download" id="dvgModalDownload" href="#" download aria-label="Download this file">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 17.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <button type="button" class="dvg-modal-close" id="dvgModalClose" aria-label="Close preview">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="dvg-modal-frame">
+        <iframe id="dvgModalIframe" src="" allow="autoplay; fullscreen" allowfullscreen title="File preview"></iframe>
+      </div>
+      <a class="dvg-modal-fallback" id="dvgModalFallback" href="#" target="_blank" rel="noopener noreferrer">
+        Trouble viewing? Open in Google Drive
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <div class="dvg-dlmgr" id="dvgDlMgr" hidden>
+    <div class="dvg-dlmgr-panel" id="dvgDlPanel" hidden>
+      <p class="dvg-dlmgr-panel-title">Downloads</p>
+      <div class="dvg-dl-list" id="dvgDlList"></div>
+    </div>
+    <button type="button" class="dvg-dlmgr-fab" id="dvgDlFab" aria-label="Downloads" aria-expanded="false" aria-haspopup="true">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 17.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="dvg-dlmgr-ring" aria-hidden="true"></span>
+      <span class="dvg-dlmgr-badge" id="dvgDlBadge" hidden></span>
+    </button>
+  </div>
+</div>
+
+<style>
+  .dvg-root {
+    --dvg-bg: #f5f5f7;
+    --dvg-surface: #ffffff;
+    --dvg-surface-2: #fbfbfc;
+    --dvg-border: rgba(0, 0, 0, 0.08);
+    --dvg-border-soft: rgba(0, 0, 0, 0.05);
+    --dvg-text: #1d1d1f;
+    --dvg-text-muted: #6e6e73;
+    --dvg-text-faint: #86868b;
+    --dvg-accent: #0071e3;
+    --dvg-accent-hover: #0077ed;
+    --dvg-accent-soft: rgba(0, 113, 227, 0.08);
+    --dvg-danger: #d70015;
+    --dvg-danger-soft: #fff2f1;
+    --dvg-radius-lg: 18px;
+    --dvg-radius-md: 12px;
+    --dvg-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.03);
+    --dvg-shadow-md: 0 16px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.04);
+    --dvg-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.24);
+    --dvg-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    all: initial;
+    display: block;
+    font-family: var(--dvg-font);
+    color: var(--dvg-text);
+    background: var(--dvg-bg);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .dvg-root, .dvg-root *, .dvg-root *::before, .dvg-root *::after {
+    box-sizing: border-box;
+  }
+  .dvg-root [hidden] { display: none !important; }
+  .dvg-root a { text-decoration: none; color: inherit; }
+  .dvg-root p, .dvg-root h1, .dvg-root span { margin: 0; }
+  /* :where() keeps this reset's specificity at zero beyond the bare element, so
+     every component's own button/input styling (all single classes, e.g.
+     .dvg-chip, .dvg-card-download) reliably wins by source order instead of
+     silently losing to this reset's color/background/border. */
+  :where(.dvg-root) button, :where(.dvg-root) input {
+    font-family: inherit;
+    font-size: 100%;
+    color: inherit;
+    background: none;
+    border: none;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+  .dvg-root ::placeholder { color: var(--dvg-text-faint); opacity: 1; }
+
+  /* ---------- Nav ---------- */
+  .dvg-nav {
+    background: var(--dvg-surface);
+    border-bottom: 1px solid var(--dvg-border-soft);
+  }
+  .dvg-nav-inner {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+  }
+  .dvg-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .dvg-brand-mark { width: 26px; height: 26px; flex-shrink: 0; }
+
+  /* ---------- Main ---------- */
+  .dvg-main {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 32px 28px 80px;
+  }
+
+  .dvg-breadcrumbs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 18px;
+    font-size: 13px;
+  }
+  .dvg-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--dvg-text-faint);
+    padding: 3px 4px;
+    border-radius: 6px;
+    transition: color 150ms ease;
+  }
+  button.dvg-crumb { cursor: pointer; }
+  button.dvg-crumb:hover { color: var(--dvg-accent); }
+  button.dvg-crumb:focus-visible { outline: 2px solid var(--dvg-accent); outline-offset: 1px; }
+  .dvg-crumb.is-current { color: var(--dvg-text); font-weight: 500; }
+  .dvg-crumb-icon { width: 13px; height: 13px; display: flex; }
+  .dvg-crumb-icon svg { width: 100%; height: 100%; }
+  .dvg-crumb-sep { width: 13px; height: 13px; color: var(--dvg-text-faint); opacity: 0.6; flex-shrink: 0; display: flex; }
+  .dvg-crumb-sep svg { width: 100%; height: 100%; }
+
+  .dvg-headrow {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .dvg-heading {
+    font-size: 32px;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+  }
+  .dvg-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(118, 118, 128, 0.1);
+    border-radius: 980px;
+    padding: 9px 14px;
+    width: 260px;
+    max-width: 100%;
+    transition: background-color 160ms ease, box-shadow 160ms ease;
+  }
+  .dvg-search:focus-within {
+    background: var(--dvg-surface);
+    box-shadow: 0 0 0 2px var(--dvg-accent);
+  }
+  .dvg-search svg { width: 16px; height: 16px; color: var(--dvg-text-faint); flex-shrink: 0; }
+  .dvg-search input { flex: 1; font-size: 14px; min-width: 0; }
+
+  .dvg-subrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .dvg-subrow-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .dvg-download-all {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 7px 14px 7px 12px;
+    border-radius: 980px;
+    background: var(--dvg-surface);
+    border: 1px solid var(--dvg-border);
+    color: var(--dvg-text-muted);
+    cursor: pointer;
+    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+  }
+  .dvg-download-all:hover { color: var(--dvg-text); border-color: var(--dvg-accent); }
+  .dvg-download-all:focus-visible { outline: 2px solid var(--dvg-accent); outline-offset: 2px; }
+  .dvg-download-all svg { width: 15px; height: 15px; }
+  .dvg-subheading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--dvg-text-faint);
+  }
+  .dvg-pulse {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #30d158;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 0 rgba(48, 209, 88, 0.5);
+    animation: dvg-pulse 2s ease-out infinite;
+  }
+  .dvg-pulse.is-refreshing { background: var(--dvg-accent); }
+  .dvg-pulse.is-error { background: var(--dvg-danger); animation: none; }
+  @keyframes dvg-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(48, 209, 88, 0.45); }
+    70% { box-shadow: 0 0 0 6px rgba(48, 209, 88, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(48, 209, 88, 0); }
+  }
+
+  .dvg-segment {
+    display: inline-flex;
+    background: rgba(118, 118, 128, 0.12);
+    border-radius: 980px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .dvg-segment-btn {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 980px;
+    color: var(--dvg-text-muted);
+    cursor: pointer;
+    transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
+    white-space: nowrap;
+  }
+  .dvg-segment-btn:hover { color: var(--dvg-text); }
+  .dvg-segment-btn.is-active {
+    background: var(--dvg-surface);
+    color: var(--dvg-text);
+    box-shadow: var(--dvg-shadow-sm);
+  }
+  .dvg-segment-btn:focus-visible { outline: 2px solid var(--dvg-accent); outline-offset: 1px; }
+
+  .dvg-category-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .dvg-chip {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 7px 16px;
+    border-radius: 980px;
+    background: var(--dvg-surface);
+    border: 1px solid var(--dvg-border);
+    color: var(--dvg-text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+  }
+  .dvg-chip:hover { border-color: var(--dvg-accent); color: var(--dvg-text); }
+  .dvg-chip.is-active {
+    background: var(--dvg-accent);
+    border-color: var(--dvg-accent);
+    color: #fff;
+  }
+  .dvg-chip:focus-visible { outline: 2px solid var(--dvg-accent); outline-offset: 2px; }
+
+  /* ---------- Error ---------- */
+  .dvg-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: var(--dvg-danger-soft);
+    border: 1px solid rgba(215, 0, 21, 0.18);
+    border-radius: var(--dvg-radius-md);
+    padding: 16px 18px;
+    margin-bottom: 24px;
+  }
+  .dvg-error-icon { width: 22px; height: 22px; color: var(--dvg-danger); flex-shrink: 0; margin-top: 1px; }
+  .dvg-error-text { flex: 1; min-width: 0; }
+  .dvg-error-title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .dvg-error-body { font-size: 13px; color: var(--dvg-text-muted); line-height: 1.5; }
+  .dvg-retry {
+    flex-shrink: 0;
+    background: var(--dvg-surface);
+    border: 1px solid var(--dvg-border);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 180ms ease, border-color 180ms ease;
+  }
+  .dvg-retry:hover { background: var(--dvg-surface-2); border-color: var(--dvg-accent); }
+  .dvg-retry:focus-visible { outline: 2px solid var(--dvg-accent); outline-offset: 2px; }
+
+  /* ---------- Empty ---------- */
+  .dvg-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 90px 20px;
+    color: var(--dvg-text-muted);
+  }
+  .dvg-empty-icon { width: 42px; height: 42px; color: var(--dvg-text-faint); margin-bottom: 16px; }
+  .dvg-empty p { font-size: 16px; font-weight: 600; color: var(--dvg-text); margin-bottom: 4px; }
+  .dvg-empty span { font-size: 14px; }
+
+  /* ---------- Grid & Cards ---------- */
+  .dvg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 22px;
+  }
+
+  .dvg-card {
+    display: block;
+    text-align: left;
+    width: 100%;
+    background: var(--dvg-surface);
+    border: 1px solid var(--dvg-border-soft);
+    border-radius: var(--dvg-radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: var(--dvg-shadow-sm);
+    transition: transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease, border-color 220ms ease;
+    opacity: 0;
+    animation: dvg-fade-in 360ms cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  .dvg-card:hover, .dvg-card:focus-visible {
+    transform: translateY(-4px);
+    box-shadow: var(--dvg-shadow-md);
+    border-color: var(--dvg-border);
+  }
+  .dvg-card:focus-visible { outline: 2px solid var(--dvg-accent); outline-offset: 2px; }
+  @keyframes dvg-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .dvg-thumb-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--dvg-surface-2);
+    overflow: hidden;
+  }
+  .dvg-thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dvg-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 1100ms ease;
+  }
+  .dvg-slide.is-active { opacity: 1; }
+  .dvg-thumb-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, #eef0f3, #e4e6ea);
+  }
+  .dvg-thumb-fallback svg { width: 32px; height: 32px; color: #a8adb5; }
+
+  .dvg-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .dvg-badge svg { width: 13px; height: 13px; color: var(--dvg-text); }
+
+  /* .dvg-root prefix bumps specificity above the ".dvg-root button" reset above
+     (which sets color: inherit; background: none;) - without it, that reset wins
+     and silently strips this button's background and icon color. */
+  .dvg-root .dvg-card-download {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #1d1d1f;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    color: #ffffff;
+    transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+  .dvg-root .dvg-card-download:hover, .dvg-root .dvg-card-download:focus-visible {
+    background: #000000;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.48);
+    transform: translateY(-1px);
+  }
+  .dvg-root .dvg-card-download svg { width: 16px; height: 16px; display: block; }
+  .dvg-root .dvg-card-download svg path { stroke: #ffffff; }
+
+  .dvg-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 200ms ease;
+    background: rgba(0, 0, 0, 0.18);
+  }
+  .dvg-card:hover .dvg-play, .dvg-card:focus-visible .dvg-play { opacity: 1; }
+  .dvg-play-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  }
+  .dvg-play-circle svg { width: 16px; height: 16px; color: #1d1d1f; margin-left: 2px; }
+
+  .dvg-chevron {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 200ms ease, transform 200ms ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .dvg-card:hover .dvg-chevron, .dvg-card:focus-visible .dvg-chevron { opacity: 1; transform: translateX(0); }
+  .dvg-chevron svg { width: 12px; height: 12px; color: var(--dvg-text); }
+
+  .dvg-card-body { padding: 13px 14px 15px; }
+  .dvg-card-name {
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .dvg-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--dvg-text-faint);
+  }
+  .dvg-card-meta svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+  /* ---------- Skeleton ---------- */
+  .dvg-skel-thumb, .dvg-skel-line {
+    background: linear-gradient(100deg, #eceef1 30%, #f6f7f8 50%, #eceef1 70%);
+    background-size: 200% 100%;
+    animation: dvg-shimmer 1.6s ease-in-out infinite;
+  }
+  .dvg-skel-thumb { width: 100%; aspect-ratio: 16 / 9; }
+  .dvg-skel-body { padding: 13px 14px 15px; }
+  .dvg-skel-line { height: 12px; border-radius: 6px; margin-bottom: 8px; }
+  .dvg-skel-line.short { width: 55%; margin-bottom: 0; }
+  @keyframes dvg-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ---------- Modal ---------- */
+  .dvg-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 999999;
+    animation: dvg-overlay-in 200ms ease forwards;
+  }
+  @keyframes dvg-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+  .dvg-modal {
+    background: var(--dvg-surface);
+    border-radius: 20px;
+    box-shadow: var(--dvg-shadow-lg);
+    width: 100%;
+    max-width: 880px;
+    overflow: hidden;
+    animation: dvg-modal-in 240ms cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes dvg-modal-in {
+    from { opacity: 0; transform: scale(0.96) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .dvg-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--dvg-border-soft);
+  }
+  .dvg-modal-title {
+    font-size: 15px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dvg-modal-close {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(118, 118, 128, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 160ms ease;
+  }
+  .dvg-modal-close:hover { background: rgba(118, 118, 128, 0.22); }
+  .dvg-modal-close:focus-visible { outline: 2px solid var(--dvg-accent); outline-offset: 2px; }
+  .dvg-modal-close svg { width: 14px; height: 14px; color: var(--dvg-text); }
+  .dvg-modal-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .dvg-modal-download {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--dvg-border);
+    box-shadow: var(--dvg-shadow-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: box-shadow 160ms ease, border-color 160ms ease, transform 160ms ease;
+  }
+  .dvg-modal-download:hover { box-shadow: var(--dvg-shadow-md); border-color: var(--dvg-accent); transform: translateY(-1px); }
+  .dvg-modal-download:focus-visible { outline: 2px solid var(--dvg-accent); outline-offset: 2px; }
+  .dvg-modal-download svg { width: 15px; height: 15px; color: var(--dvg-accent); }
+  .dvg-modal-frame {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+  }
+  .dvg-modal-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .dvg-modal-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 11px;
+    font-size: 12.5px;
+    color: var(--dvg-text-faint);
+    border-top: 1px solid var(--dvg-border-soft);
+    transition: color 160ms ease;
+  }
+  .dvg-modal-fallback:hover { color: var(--dvg-accent); }
+  .dvg-modal-fallback svg { width: 12px; height: 12px; }
+
+  .dvg-dlmgr {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  .dvg-dlmgr-fab {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #1d1d1f;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.28);
+    cursor: pointer;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+  .dvg-dlmgr-fab:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.34); }
+  .dvg-dlmgr-fab:focus-visible { outline: 2px solid var(--dvg-accent); outline-offset: 2px; }
+  .dvg-dlmgr-fab svg { width: 22px; height: 22px; }
+  .dvg-dlmgr-ring {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: var(--dvg-accent);
+    border-right-color: var(--dvg-accent);
+    opacity: 0;
+    animation: dvg-dlmgr-spin 850ms linear infinite;
+  }
+  .dvg-dlmgr-fab.is-active .dvg-dlmgr-ring { opacity: 1; }
+  @keyframes dvg-dlmgr-spin { to { transform: rotate(360deg); } }
+  .dvg-dlmgr-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--dvg-danger);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+  }
+
+  .dvg-dlmgr-panel {
+    width: 320px;
+    max-width: calc(100vw - 40px);
+    max-height: 360px;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: var(--dvg-shadow-lg);
+    border: 1px solid var(--dvg-border-soft);
+    padding: 6px;
+  }
+  .dvg-dlmgr-panel-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--dvg-text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 8px 10px 6px;
+  }
+  .dvg-dl-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 10px;
+  }
+  .dvg-dl-item:hover { background: var(--dvg-surface-2); }
+  .dvg-dl-item-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: var(--dvg-accent-soft);
+    color: var(--dvg-accent);
+  }
+  .dvg-dl-item.is-done .dvg-dl-item-icon { background: rgba(48,209,88,0.16); color: #1a9e46; }
+  .dvg-dl-item.is-error .dvg-dl-item-icon { background: var(--dvg-danger-soft); color: var(--dvg-danger); }
+  .dvg-dl-item.is-cancelled .dvg-dl-item-icon { background: rgba(118,118,128,0.14); color: var(--dvg-text-faint); }
+  .dvg-dl-item-icon svg { width: 14px; height: 14px; }
+  .dvg-dl-item-body { flex: 1; min-width: 0; }
+  .dvg-dl-item-name {
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dvg-dl-item-status {
+    font-size: 12px;
+    color: var(--dvg-text-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dvg-dl-item-cancel {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dvg-text-faint);
+    flex-shrink: 0;
+  }
+  .dvg-dl-item-cancel:hover { background: var(--dvg-danger-soft); color: var(--dvg-danger); }
+  .dvg-dl-item-cancel:focus-visible { outline: 2px solid var(--dvg-accent); outline-offset: 1px; }
+  .dvg-dl-item-cancel svg { width: 12px; height: 12px; }
+
+  @media (max-width: 640px) {
+    .dvg-nav-inner { padding: 12px 18px; }
+    .dvg-main { padding: 22px 18px 60px; }
+    .dvg-heading { font-size: 26px; }
+    .dvg-search { width: 100%; order: 3; }
+    .dvg-headrow { gap: 12px; }
+    .dvg-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+    .dvg-modal-overlay { padding: 0; }
+    .dvg-modal { max-width: none; height: 100%; border-radius: 0; display: flex; flex-direction: column; }
+    .dvg-modal-frame { flex: 1; aspect-ratio: auto; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dvg-root * {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+</style>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ======================= CONFIG - swap these two values ======================= */
+  // Read-only Drive API key (restrict it in Google Cloud Console - see note above).
+  var API_KEY = "AIzaSyBkk3TvbEqctE1oeSfBTo5bYy8zlTnp8F4";
+  // Either the raw folder ID or the full "drive.google.com/drive/folders/..." URL.
+  var FOLDER_ID_OR_URL = "https://drive.google.com/drive/folders/1pFRwC_KxneYmrKUqNVD9g5vUQXSyHAse?usp=drive_link";
+  // How often to re-check the current folder for new uploads, in milliseconds.
+  var REFRESH_INTERVAL_MS = 60000;
+  // How many items "Most Recent" shows before switching to "All Projects".
+  var RECENT_LIMIT = 5;
+  // Page heading shown at the root level (independent of the Drive folder's own name).
+  var ROOT_HEADING = "Craig DeBoor";
+  // Browser-tab favicon (64x64 PNG, embedded as a data URI so the file stays self-contained).
+  var FAVICON_DATA_URI = "data:image/png;base64,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";
+  /* ================================================================================ */
+
+  function extractFolderId(value) {
+    var match = /\/folders\/([a-zA-Z0-9_-]+)/.exec(value);
+    if (match) return match[1];
+    var idParam = /[?&]id=([a-zA-Z0-9_-]+)/.exec(value);
+    if (idParam) return idParam[1];
+    return value.trim();
+  }
+  var ROOT_FOLDER_ID = extractFolderId(FOLDER_ID_OR_URL);
+  var FOLDER_MIME = "application/vnd.google-apps.folder";
+
+  var root = document.getElementById("dvgRoot");
+  var elGrid = root.querySelector("#dvgGrid");
+  var elSkeleton = root.querySelector("#dvgSkeleton");
+  var elEmpty = root.querySelector("#dvgEmpty");
+  var elEmptyTitle = root.querySelector("#dvgEmptyTitle");
+  var elEmptyBody = root.querySelector("#dvgEmptyBody");
+  var elError = root.querySelector("#dvgError");
+  var elErrorTitle = root.querySelector("#dvgErrorTitle");
+  var elErrorBody = root.querySelector("#dvgErrorBody");
+  var elRetry = root.querySelector("#dvgRetry");
+  var elUpdated = root.querySelector("#dvgUpdated");
+  var elPulse = root.querySelector("#dvgPulse");
+  var elHeading = root.querySelector("#dvgHeading");
+  var elBreadcrumbs = root.querySelector("#dvgBreadcrumbs");
+  var elSearchInput = root.querySelector("#dvgSearchInput");
+  var elViewRecent = root.querySelector("#dvgViewRecent");
+  var elViewAll = root.querySelector("#dvgViewAll");
+  var elCategoryRow = root.querySelector("#dvgCategoryRow");
+  var elCategoryChips = Array.prototype.slice.call(root.querySelectorAll(".dvg-chip"));
+  var elModalOverlay = root.querySelector("#dvgModalOverlay");
+  var elModalTitle = root.querySelector("#dvgModalTitle");
+  var elModalIframe = root.querySelector("#dvgModalIframe");
+  var elModalClose = root.querySelector("#dvgModalClose");
+  var elModalFallback = root.querySelector("#dvgModalFallback");
+  var elModalDownload = root.querySelector("#dvgModalDownload");
+  var elDownloadAll = root.querySelector("#dvgDownloadAll");
+  var elDlMgr = root.querySelector("#dvgDlMgr");
+  var elDlFab = root.querySelector("#dvgDlFab");
+  var elDlBadge = root.querySelector("#dvgDlBadge");
+  var elDlPanel = root.querySelector("#dvgDlPanel");
+  var elDlList = root.querySelector("#dvgDlList");
+
+  var breadcrumbs = [{ id: ROOT_FOLDER_ID, name: "Home" }];
+  var currentFolderId = ROOT_FOLDER_ID;
+  var currentItems = [];
+  var searchQuery = "";
+  var viewMode = "recent";
+  var category = "all";
+  var previewCache = new Map();
+  var hasLoadedOnce = false;
+  var modalOpen = false;
+  var loadToken = 0;
+  var activeSlideshowTimers = [];
+  var lastItemSignature = null;
+  var lastUpdatedLabel = null;
+  var prefersReducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var SLIDESHOW_INTERVAL_MS = 3500;
+
+  function startSlideshow(thumbWrap) {
+    var slides = thumbWrap.querySelectorAll(".dvg-slide");
+    var idx = 0;
+    var timer = setInterval(function () {
+      slides[idx].classList.remove("is-active");
+      idx = (idx + 1) % slides.length;
+      slides[idx].classList.add("is-active");
+    }, SLIDESHOW_INTERVAL_MS);
+    activeSlideshowTimers.push(timer);
+  }
+  function clearSlideshowTimers() {
+    activeSlideshowTimers.forEach(clearInterval);
+    activeSlideshowTimers = [];
+  }
+
+  function svgFolder() {
+    return '<svg viewBox="0 0 24 24" fill="none"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4.379a1.5 1.5 0 0 1 1.06.44l1.122 1.12A1.5 1.5 0 0 0 12.12 8H19.5A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5v-10Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  }
+  function svgVideo() {
+    return '<svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h8A1.5 1.5 0 0 1 15 7.5v9A1.5 1.5 0 0 1 13.5 18h-8A1.5 1.5 0 0 1 4 16.5v-9Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m19.15 9.1-3.15 2.15v1.5l3.15 2.15c.6.4 1.35-.03 1.35-.77V9.87c0-.74-.75-1.17-1.35-.77Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  }
+  function svgPlay() {
+    return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5-11-6.5Z"/></svg>';
+  }
+  function svgHome() {
+    return '<svg viewBox="0 0 24 24" fill="none"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-8.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  }
+  function svgChevronRight() {
+    return '<svg viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  function svgImage() {
+    return '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="8.5" cy="9.5" r="1.5" stroke="currentColor" stroke-width="1.6"/><path d="m5 17 5-5 3 3 3-4 3 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  function svgDocument() {
+    return '<svg viewBox="0 0 24 24" fill="none"><path d="M7 3.5h7l4 4V19.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3.5V8h4M9 12.5h6M9 15.5h6M9 9.5h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  }
+  function svgExpand() {
+    return '<svg viewBox="0 0 24 24" fill="none"><path d="M9 4H4v5M15 4h5v5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  function svgDownload() {
+    return '<svg viewBox="0 0 24 24" fill="none"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 17.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-1.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  function svgCheckSmall() {
+    return '<svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  function svgWarnSmall() {
+    return '<svg viewBox="0 0 24 24" fill="none"><path d="M12 8v5m0 3h.01M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.3 2.25h17.76a1.5 1.5 0 0 0 1.3-2.25L13.71 3.86a1.5 1.5 0 0 0-2.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  function svgCloseSmall() {
+    return '<svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  }
+
+  // Google-native Docs/Sheets/Slides have no fixed binary content and need /export
+  // with a target format; everything else (regular video/image/office files, which
+  // is all this folder actually contains) downloads as-is via alt=media.
+  var EXPORT_MIME = {
+    "application/vnd.google-apps.document": "application/pdf",
+    "application/vnd.google-apps.spreadsheet": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.google-apps.presentation": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+  };
+  function downloadUrlFor(item) {
+    var exportMime = EXPORT_MIME[item.mimeType];
+    if (exportMime) {
+      var exportParams = new URLSearchParams({ key: API_KEY, mimeType: exportMime });
+      return "https://www.googleapis.com/drive/v3/files/" + item.id + "/export?" + exportParams.toString();
+    }
+    var params = new URLSearchParams({ key: API_KEY, alt: "media" });
+    return "https://www.googleapis.com/drive/v3/files/" + item.id + "?" + params.toString();
+  }
+  function clickDownloadLink(url, filename) {
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "";
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  // Minimal dependency-free ZIP writer (STORE method, i.e. no compression - the
+  // video/image files here are already compressed, so there's nothing to gain from
+  // deflating them, and STORE keeps this to plain, well-documented byte-layout code
+  // instead of pulling in a compression library). Produces a standard .zip any OS
+  // can open. CRC-32 is required by the format to verify each entry.
+  var CRC_TABLE = (function () {
+    var table = [];
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      table[n] = c >>> 0;
+    }
+    return table;
+  })();
+  function crc32(bytes) {
+    var crc = 0xffffffff;
+    for (var i = 0; i < bytes.length; i++) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+  function buildZip(files) {
+    var encoder = new TextEncoder();
+    var localParts = [];
+    var centralParts = [];
+    var offset = 0;
+
+    files.forEach(function (file) {
+      var nameBytes = encoder.encode(file.name);
+      var crc = crc32(file.bytes);
+      var size = file.bytes.length;
+
+      var local = new DataView(new ArrayBuffer(30));
+      local.setUint32(0, 0x04034b50, true);
+      local.setUint16(4, 20, true);
+      local.setUint16(6, 0x0800, true);
+      local.setUint16(8, 0, true);
+      local.setUint16(10, 0, true);
+      local.setUint16(12, 0x21, true);
+      local.setUint32(14, crc, true);
+      local.setUint32(18, size, true);
+      local.setUint32(22, size, true);
+      local.setUint16(26, nameBytes.length, true);
+      local.setUint16(28, 0, true);
+      localParts.push(new Uint8Array(local.buffer), nameBytes, file.bytes);
+
+      var central = new DataView(new ArrayBuffer(46));
+      central.setUint32(0, 0x02014b50, true);
+      central.setUint16(4, 20, true);
+      central.setUint16(6, 20, true);
+      central.setUint16(8, 0x0800, true);
+      central.setUint16(10, 0, true);
+      central.setUint16(12, 0, true);
+      central.setUint16(14, 0x21, true);
+      central.setUint32(16, crc, true);
+      central.setUint32(20, size, true);
+      central.setUint32(24, size, true);
+      central.setUint16(28, nameBytes.length, true);
+      central.setUint16(30, 0, true);
+      central.setUint16(32, 0, true);
+      central.setUint16(34, 0, true);
+      central.setUint16(36, 0, true);
+      central.setUint32(38, 0, true);
+      central.setUint32(42, offset, true);
+      centralParts.push(new Uint8Array(central.buffer), nameBytes);
+
+      offset += 30 + nameBytes.length + size;
+    });
+
+    var centralSize = centralParts.reduce(function (sum, p) { return sum + p.length; }, 0);
+    var end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true);
+    end.setUint16(4, 0, true);
+    end.setUint16(6, 0, true);
+    end.setUint16(8, files.length, true);
+    end.setUint16(10, files.length, true);
+    end.setUint32(12, centralSize, true);
+    end.setUint32(16, offset, true);
+    end.setUint16(20, 0, true);
+
+    return new Blob(localParts.concat(centralParts, [new Uint8Array(end.buffer)]), { type: "application/zip" });
+  }
+  // Reads a fetch response with progress callbacks (fraction 0-1) as chunks arrive,
+  // falling back to a plain res.blob() if the browser can't stream or Drive didn't
+  // send a Content-Length. Resolves to a Uint8Array (not a Blob - avoids an extra
+  // full copy when the caller needs raw bytes for zipping). Takes an AbortController
+  // so the download-manager panel's Cancel button can stop it; also self-aborts if
+  // no new data arrives for `idleTimeoutMs`, so a hung connection can't leave a job
+  // stuck "in progress" forever with no error. The two abort causes are told apart
+  // via the rejected error's `.name` (TimeoutError vs the caller's own abort reason).
+  function fetchWithProgress(url, onProgress, idleTimeoutMs, controller) {
+    controller = controller || new AbortController();
+    var idleTimer = null;
+    var idleFired = false;
+    function resetIdleTimer() {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(function () { idleFired = true; controller.abort(); }, idleTimeoutMs || 60000);
+    }
+    resetIdleTimer();
+
+    return fetch(url, { signal: controller.signal })
+      .then(function (res) {
+        if (!res.ok) throw new Error("Drive returned status " + res.status);
+        var total = Number(res.headers.get("content-length")) || 0;
+        if (!res.body || !res.body.getReader) {
+          return res.blob().then(function (blob) { return blob.arrayBuffer(); }).then(function (buf) { return new Uint8Array(buf); });
+        }
+        var reader = res.body.getReader();
+        var received = 0;
+        var chunks = [];
+        function pump() {
+          return reader.read().then(function (result) {
+            resetIdleTimer();
+            if (result.done) {
+              var out = new Uint8Array(received);
+              var offset = 0;
+              for (var i = 0; i < chunks.length; i++) { out.set(chunks[i], offset); offset += chunks[i].length; }
+              return out;
+            }
+            chunks.push(result.value);
+            received += result.value.length;
+            if (total) onProgress(Math.min(received / total, 1));
+            return pump();
+          });
+        }
+        return pump();
+      })
+      .catch(function (err) {
+        if (err && err.name === "AbortError") {
+          var e = new Error(idleFired ? "Timed out - no response from Google Drive" : "Cancelled");
+          e.name = idleFired ? "TimeoutError" : "CancelledError";
+          throw e;
+        }
+        throw err;
+      })
+      .finally(function () { clearTimeout(idleTimer); });
+  }
+
+  /* ---------- Download manager (floating icon + panel, bottom-right) ---------- */
+
+  var downloadJobs = [];
+  var dlJobIdCounter = 0;
+  var dlPanelOpen = false;
+
+  function createDownloadJob(label) {
+    var job = { id: ++dlJobIdCounter, label: label, status: "active", text: "Starting\u2026", cancel: null, removeTimer: null };
+    downloadJobs.unshift(job);
+    renderDownloadManager();
+    return job;
+  }
+  function updateDownloadJob(job, text) {
+    if (job.status !== "active") return;
+    job.text = text;
+    renderDownloadManager();
+  }
+  function finishDownloadJob(job, status, text, autoRemoveMs) {
+    job.status = status; // "done" | "error" | "cancelled"
+    job.text = text;
+    job.cancel = null;
+    renderDownloadManager();
+    clearTimeout(job.removeTimer);
+    job.removeTimer = setTimeout(function () { removeDownloadJob(job); }, autoRemoveMs || 4000);
+  }
+  function removeDownloadJob(job) {
+    var idx = downloadJobs.indexOf(job);
+    if (idx !== -1) downloadJobs.splice(idx, 1);
+    renderDownloadManager();
+  }
+  function cancelDownloadJob(job) {
+    if (job.status !== "active") return;
+    if (job.cancel) job.cancel();
+    finishDownloadJob(job, "cancelled", "Cancelled", 2500);
+  }
+
+  function downloadJobIcon(job) {
+    if (job.status === "done") return svgCheckSmall();
+    if (job.status === "error") return svgWarnSmall();
+    if (job.status === "cancelled") return svgCloseSmall();
+    return svgDownload();
+  }
+
+  function renderDownloadManager() {
+    var hasJobs = downloadJobs.length > 0;
+    elDlMgr.hidden = !hasJobs;
+    if (!hasJobs) {
+      elDlPanel.hidden = true;
+      dlPanelOpen = false;
+      elDlFab.setAttribute("aria-expanded", "false");
+    }
+    var activeCount = downloadJobs.filter(function (j) { return j.status === "active"; }).length;
+    elDlFab.classList.toggle("is-active", activeCount > 0);
+    if (activeCount > 1) {
+      elDlBadge.textContent = String(activeCount);
+      elDlBadge.hidden = false;
+    } else {
+      elDlBadge.hidden = true;
+    }
+
+    elDlList.innerHTML = "";
+    downloadJobs.forEach(function (job) {
+      var row = document.createElement("div");
+      row.className = "dvg-dl-item is-" + job.status;
+
+      var icon = document.createElement("div");
+      icon.className = "dvg-dl-item-icon";
+      icon.innerHTML = downloadJobIcon(job);
+      row.appendChild(icon);
+
+      var body = document.createElement("div");
+      body.className = "dvg-dl-item-body";
+      var name = document.createElement("p");
+      name.className = "dvg-dl-item-name";
+      name.textContent = job.label;
+      var status = document.createElement("p");
+      status.className = "dvg-dl-item-status";
+      status.textContent = job.text;
+      body.appendChild(name);
+      body.appendChild(status);
+      row.appendChild(body);
+
+      if (job.status === "active") {
+        var cancelBtn = document.createElement("button");
+        cancelBtn.type = "button";
+        cancelBtn.className = "dvg-dl-item-cancel";
+        cancelBtn.setAttribute("aria-label", "Cancel download");
+        cancelBtn.innerHTML = svgCloseSmall();
+        cancelBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          cancelDownloadJob(job);
+        });
+        row.appendChild(cancelBtn);
+      }
+      elDlList.appendChild(row);
+    });
+  }
+
+  elDlFab.addEventListener("click", function () {
+    dlPanelOpen = !dlPanelOpen;
+    elDlPanel.hidden = !dlPanelOpen;
+    elDlFab.setAttribute("aria-expanded", String(dlPanelOpen));
+  });
+  document.addEventListener("click", function (e) {
+    if (dlPanelOpen && !elDlMgr.contains(e.target)) {
+      dlPanelOpen = false;
+      elDlPanel.hidden = true;
+      elDlFab.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  /* ---------- Download actions ---------- */
+
+  // Drive's alt=media response doesn't send a filename, and browsers ignore the
+  // anchor `download` attribute for cross-origin URLs - so a plain link would save
+  // the file under its raw Drive file ID instead of its real name. We fetch the
+  // bytes ourselves and save via a same-origin blob URL instead, which lets us set
+  // the real filename. `options.existingJob` lets a folder download (which already
+  // created its own job) hand off to a single-file fetch without spawning a second
+  // entry in the panel; `options.silent` skips the panel entirely.
+  function triggerDownload(item, options) {
+    var silent = !!(options && options.silent);
+    var existingJob = options && options.existingJob;
+    var url = downloadUrlFor(item);
+    var label = item.name || "that file";
+    var job = silent ? null : (existingJob || createDownloadJob(label));
+    if (job && existingJob) { job.label = label; renderDownloadManager(); }
+
+    var controller = new AbortController();
+    if (job) job.cancel = function () { controller.abort(); };
+
+    fetchWithProgress(url, function (fraction) {
+      if (job) updateDownloadJob(job, Math.round(fraction * 100) + "%");
+    }, 180000, controller)
+      .then(function (bytes) {
+        var blobUrl = URL.createObjectURL(new Blob([bytes]));
+        clickDownloadLink(blobUrl, item.name);
+        setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 4000);
+        if (job) finishDownloadJob(job, "done", "Downloaded");
+      })
+      .catch(function (err) {
+        if (job && job.status !== "active") return; // cancelled - panel already updated
+        console.error("[Media Library] download failed:", item.name, err);
+        if (job) finishDownloadJob(job, "error", (err && err.message) || "Failed", 5000);
+      });
+  }
+  // Multiple files download as a single .zip (like Drive's own "download folder"),
+  // built from files fetched one at a time - not concurrently, which is both what
+  // makes building a zip possible at all (need the actual bytes) and what fixes
+  // earlier failures from firing several large fetches against the API at once.
+  // Every exit path (all succeed, some fail, all fail, cancelled, or the zip step
+  // itself throws) always resolves the job - nothing is left stuck "Fetching...".
+  function downloadFiles(items, zipName, existingJob) {
+    if (!items.length) {
+      var emptyJob = existingJob || createDownloadJob(zipName || "Download");
+      finishDownloadJob(emptyJob, "error", "No files to download here.", 3000);
+      return;
+    }
+    if (items.length === 1) {
+      triggerDownload(items[0], { existingJob: existingJob });
+      return;
+    }
+    var job = existingJob || createDownloadJob(zipName || (items.length + " files"));
+    if (zipName) job.label = zipName;
+    var collected = [];
+    var failedNames = [];
+    var index = 0;
+    var currentController = null;
+    job.cancel = function () { if (currentController) currentController.abort(); };
+
+    function next() {
+      if (job.status !== "active") return Promise.resolve();
+      if (index >= items.length) return Promise.resolve();
+      var item = items[index++];
+      var label = "Fetching " + index + " of " + items.length + ": " + (item.name || "file");
+      updateDownloadJob(job, label + "\u2026");
+      currentController = new AbortController();
+      return fetchWithProgress(downloadUrlFor(item), function (fraction) {
+        updateDownloadJob(job, label + "\u2026 " + Math.round(fraction * 100) + "%");
+      }, 60000, currentController)
+        .then(function (bytes) {
+          collected.push({ name: item.name || "file", bytes: bytes });
+        })
+        .catch(function (err) {
+          if (job.status !== "active") return;
+          console.error("[Media Library] failed to fetch for zip:", item.name, err);
+          failedNames.push(item.name || "file");
+        })
+        .then(next);
+    }
+
+    next()
+      .then(function () {
+        if (job.status !== "active") return; // cancelled - panel already updated
+        if (!collected.length) {
+          finishDownloadJob(job, "error", "Couldn't download any files", 5000);
+          return;
+        }
+        updateDownloadJob(job, "Zipping " + collected.length + " file" + (collected.length === 1 ? "" : "s") + "\u2026");
+        var zipBlob = buildZip(collected);
+        var zipUrl = URL.createObjectURL(zipBlob);
+        clickDownloadLink(zipUrl, (zipName || "download") + ".zip");
+        setTimeout(function () { URL.revokeObjectURL(zipUrl); }, 4000);
+        var msg = "Downloaded " + collected.length + " file" + (collected.length === 1 ? "" : "s");
+        if (failedNames.length) msg += " \u2014 " + failedNames.length + " failed";
+        finishDownloadJob(job, "done", msg);
+      })
+      .catch(function (err) {
+        if (job.status !== "active") return;
+        console.error("[Media Library] zip download failed:", err);
+        finishDownloadJob(job, "error", "Something went wrong building the zip", 5000);
+      });
+  }
+  function downloadFolderContents(folder) {
+    var job = createDownloadJob(folder.name || "Folder");
+    updateDownloadJob(job, "Checking folder contents\u2026");
+    job.cancel = function () {}; // the metadata check below is quick and not itself abortable
+    fetchChildren(folder.id)
+      .then(function (items) {
+        if (job.status !== "active") return; // cancelled while checking
+        var files = items.filter(function (i) { return i.mimeType !== FOLDER_MIME; });
+        downloadFiles(files, folder.name, job);
+      })
+      .catch(function () {
+        if (job.status !== "active") return;
+        finishDownloadJob(job, "error", "Couldn't read that folder", 4000);
+      });
+  }
+  function getKind(item) {
+    if (item.mimeType === FOLDER_MIME) return "folder";
+    if (item.mimeType.indexOf("video/") === 0) return "video";
+    if (item.mimeType.indexOf("image/") === 0) return "image";
+    return "document";
+  }
+  function kindIcon(kind) {
+    if (kind === "folder") return svgFolder();
+    if (kind === "video") return svgVideo();
+    if (kind === "image") return svgImage();
+    return svgDocument();
+  }
+
+  // Folders aren't tagged in Drive, so category is inferred from the name:
+  // "travel" anywhere in the name -> Travel Videos; starts with a 2+ digit
+  // house number (short name) -> Property Tour; everything else -> Talking Head.
+  function classifyCategory(name) {
+    var n = (name || "").trim();
+    if (/travel/i.test(n)) return "travel";
+    var startsWithHouseNumber = /^\d{2,}\b/.test(n);
+    var isShort = n.split(/\s+/).length <= 6;
+    if (startsWithHouseNumber && isShort) return "tour";
+    return "talking";
+  }
+
+  function isRoot() { return breadcrumbs.length === 1; }
+
+  function buildSkeleton() {
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < 8; i++) {
+      var card = document.createElement("div");
+      card.className = "dvg-card";
+      card.style.animation = "none";
+      card.style.opacity = "1";
+      card.innerHTML =
+        '<div class="dvg-skel-thumb"></div>' +
+        '<div class="dvg-skel-body">' +
+        '<div class="dvg-skel-line"></div>' +
+        '<div class="dvg-skel-line short"></div>' +
+        "</div>";
+      frag.appendChild(card);
+    }
+    elSkeleton.appendChild(frag);
+  }
+  buildSkeleton();
+
+  function biggerThumb(url) {
+    if (!url) return url;
+    return url.replace(/=s\d+$/, "=s500");
+  }
+
+  function formatDate(iso) {
+    var date = new Date(iso);
+    var now = new Date();
+    var diffMs = now - date;
+    var diffMin = Math.floor(diffMs / 60000);
+    var diffHr = Math.floor(diffMin / 60);
+    var diffDay = Math.floor(diffHr / 24);
+
+    var isSameDay = date.toDateString() === now.toDateString();
+    var yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    var isYesterday = date.toDateString() === yesterday.toDateString();
+
+    if (diffMin < 1) return "Just now";
+    if (diffMin < 60) return diffMin + " minute" + (diffMin === 1 ? "" : "s") + " ago";
+    if (isSameDay) return diffHr + " hour" + (diffHr === 1 ? "" : "s") + " ago";
+    if (isYesterday) return "Yesterday";
+    if (diffDay < 7) return diffDay + " days ago";
+    return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
+  }
+
+  /* ---------- Networking ---------- */
+
+  function driveFetch(query, extraParams) {
+    var params = new URLSearchParams(Object.assign({
+      q: query,
+      key: API_KEY,
+      orderBy: "createdTime desc",
+      fields: "files(id,name,mimeType,thumbnailLink,webViewLink,createdTime)"
+    }, extraParams || {}));
+    var url = "https://www.googleapis.com/drive/v3/files?" + params.toString();
+    return fetch(url).then(function (res) {
+      if (!res.ok) {
+        return res.json().catch(function () { return null; }).then(function (body) {
+          var err = new Error("Drive API error " + res.status);
+          err.status = res.status;
+          err.body = body;
+          throw err;
+        });
+      }
+      return res.json();
+    }).then(function (data) { return data.files || []; });
+  }
+
+  function fetchChildren(folderId) {
+    var q = "'" + folderId + "' in parents and trashed = false";
+    return driveFetch(q, { pageSize: "60" });
+  }
+
+  var MAX_PREVIEW_FRAMES = 4;
+
+  // A folder's card shows one static thumbnail (its own video, or first image) when
+  // it has files directly inside it - no animation. Only a folder with nothing
+  // directly inside it (just subfolders, so a static thumbnail would be blank)
+  // dips one level into up to MAX_PREVIEW_FRAMES of its subfolders to borrow a
+  // frame from each, and cycles between them. This is content-based, not tied to
+  // any folder name, so it applies to any folder in this situation, not just one.
+  function fetchFolderPreviewFrames(folder) {
+    var folderId = folder.id;
+    if (previewCache.has(folderId)) return Promise.resolve(previewCache.get(folderId));
+
+    function thumbsOfKind(id, mimeFilter, limit) {
+      var q = "'" + id + "' in parents and trashed = false" + (mimeFilter ? " and " + mimeFilter : "");
+      return driveFetch(q, { pageSize: String(limit), fields: "files(thumbnailLink)" })
+        .then(function (files) {
+          return files.map(function (f) { return f.thumbnailLink; }).filter(Boolean);
+        })
+        .catch(function () { return []; });
+    }
+
+    function oneFrame(id) {
+      return thumbsOfKind(id, "mimeType contains 'video/'", 1).then(function (frames) {
+        if (frames.length) return frames[0];
+        return thumbsOfKind(id, "mimeType contains 'image/'", 1).then(function (imgs) { return imgs[0] || null; });
+      });
+    }
+
+    var promise = thumbsOfKind(folderId, "mimeType contains 'video/'", 1)
+      .then(function (frames) {
+        if (frames.length) return frames;
+        return thumbsOfKind(folderId, "mimeType contains 'image/'", 1);
+      })
+      .then(function (frames) {
+        if (frames.length) return frames;
+        // Nothing directly inside; borrow one frame each from a few subfolders.
+        var q = "'" + folderId + "' in parents and trashed = false and mimeType = '" + FOLDER_MIME + "'";
+        return driveFetch(q, { pageSize: String(MAX_PREVIEW_FRAMES), fields: "files(id)" }).then(function (subfolders) {
+          return Promise.all(subfolders.map(function (f) { return oneFrame(f.id); }))
+            .then(function (results) { return results.filter(Boolean); });
+        }).catch(function () { return []; });
+      })
+      .then(function (frames) {
+        previewCache.set(folderId, frames);
+        return frames;
+      })
+      .catch(function () {
+        previewCache.set(folderId, []);
+        return [];
+      });
+
+    previewCache.set(folderId, promise);
+    return promise;
+  }
+
+  function withConcurrency(items, limit, fn) {
+    var i = 0;
+    function next() {
+      if (i >= items.length) return Promise.resolve();
+      var item = items[i++];
+      return fn(item).then(next);
+    }
+    var workers = [];
+    for (var w = 0; w < Math.min(limit, items.length); w++) workers.push(next());
+    return Promise.all(workers);
+  }
+
+  /* ---------- Rendering ---------- */
+
+  var KIND_LABEL = { image: "Image", document: "Document" };
+  var KIND_VERB = { folder: "Open folder ", video: "Play video ", image: "View image ", document: "Open " };
+
+  function buildCard(item) {
+    var kind = getKind(item);
+    var isFolder = kind === "folder";
+    var card = document.createElement("div");
+    card.className = "dvg-card";
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", KIND_VERB[kind] + (item.name || ""));
+
+    var thumbWrap = document.createElement("div");
+    thumbWrap.className = "dvg-thumb-wrap";
+
+    var frames = (isFolder ? (item.previewFrames || []) : (item.thumbnailLink ? [item.thumbnailLink] : []))
+      .map(biggerThumb)
+      .filter(Boolean);
+
+    function fallbackEl() {
+      var fb = document.createElement("div");
+      fb.className = "dvg-thumb-fallback";
+      fb.innerHTML = kindIcon(kind);
+      return fb;
+    }
+
+    if (frames.length) {
+      frames.forEach(function (url, i) {
+        var img = document.createElement("img");
+        img.className = "dvg-slide" + (i === 0 ? " is-active" : "");
+        img.src = url;
+        img.alt = item.name || kind;
+        img.loading = "lazy";
+        img.referrerPolicy = "no-referrer";
+        img.onerror = function () { img.remove(); };
+        thumbWrap.appendChild(img);
+      });
+      if (frames.length > 1 && !prefersReducedMotion) startSlideshow(thumbWrap);
+    } else {
+      thumbWrap.appendChild(fallbackEl());
+    }
+
+    var badge = document.createElement("div");
+    badge.className = "dvg-badge";
+    badge.innerHTML = kindIcon(kind);
+    thumbWrap.appendChild(badge);
+
+    var downloadBtn = document.createElement("button");
+    downloadBtn.type = "button";
+    downloadBtn.className = "dvg-card-download";
+    downloadBtn.innerHTML = svgDownload();
+    downloadBtn.setAttribute("aria-label", isFolder ? "Download files in " + (item.name || "this folder") : "Download " + (item.name || "this file"));
+    downloadBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (isFolder) downloadFolderContents(item);
+      else downloadFiles([item]);
+    });
+    downloadBtn.addEventListener("keydown", function (e) { e.stopPropagation(); });
+    thumbWrap.appendChild(downloadBtn);
+
+    if (kind === "folder") {
+      var chevron = document.createElement("div");
+      chevron.className = "dvg-chevron";
+      chevron.innerHTML = svgChevronRight();
+      thumbWrap.appendChild(chevron);
+    } else if (kind === "video") {
+      var play = document.createElement("div");
+      play.className = "dvg-play";
+      play.innerHTML = '<div class="dvg-play-circle">' + svgPlay() + "</div>";
+      thumbWrap.appendChild(play);
+    } else {
+      var expand = document.createElement("div");
+      expand.className = "dvg-play";
+      expand.innerHTML = '<div class="dvg-play-circle">' + svgExpand() + "</div>";
+      thumbWrap.appendChild(expand);
+    }
+
+    var body = document.createElement("div");
+    body.className = "dvg-card-body";
+
+    var name = document.createElement("p");
+    name.className = "dvg-card-name";
+    name.textContent = item.name || "Untitled";
+
+    var meta = document.createElement("div");
+    meta.className = "dvg-card-meta";
+    meta.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none"><path d="M12 7v5l3.5 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span></span>';
+    var metaText = KIND_LABEL[kind] ? KIND_LABEL[kind] + " \u00B7 " + formatDate(item.createdTime) : formatDate(item.createdTime);
+    meta.querySelector("span").textContent = metaText;
+
+    body.appendChild(name);
+    body.appendChild(meta);
+    card.appendChild(thumbWrap);
+    card.appendChild(body);
+
+    function activate() {
+      if (isFolder) openFolder(item.id, item.name);
+      else openModal(item);
+    }
+    card.addEventListener("click", activate);
+    card.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        activate();
+      }
+    });
+
+    return card;
+  }
+
+  function renderGrid(list, isSearching) {
+    clearSlideshowTimers();
+    elGrid.innerHTML = "";
+    if (!list.length) {
+      elEmptyTitle.textContent = isSearching ? "No matches" : "Nothing here yet";
+      elEmptyBody.textContent = isSearching
+        ? "Try a different search term."
+        : "New uploads will appear here automatically.";
+      elEmpty.hidden = false;
+      elGrid.hidden = true;
+      return;
+    }
+    elEmpty.hidden = true;
+    elGrid.hidden = false;
+    var frag = document.createDocumentFragment();
+    list.forEach(function (item, i) {
+      var card = buildCard(item);
+      card.style.animationDelay = Math.min(i * 30, 300) + "ms";
+      frag.appendChild(card);
+    });
+    elGrid.appendChild(frag);
+  }
+
+  function applyFilterAndRender() {
+    elCategoryRow.hidden = !isRoot();
+
+    var q = searchQuery.trim().toLowerCase();
+    var list = currentItems.slice();
+
+    if (isRoot() && category !== "all") {
+      list = list.filter(function (i) { return classifyCategory(i.name) === category; });
+    }
+    if (q) {
+      list = list.filter(function (i) { return (i.name || "").toLowerCase().indexOf(q) !== -1; });
+    } else if (viewMode === "recent") {
+      list = list.slice(0, RECENT_LIMIT);
+    }
+    renderGrid(list, !!q);
+  }
+
+  function renderBreadcrumbs() {
+    elBreadcrumbs.innerHTML = "";
+    breadcrumbs.forEach(function (b, i) {
+      var isLast = i === breadcrumbs.length - 1;
+      var el = document.createElement(isLast ? "span" : "button");
+      el.className = "dvg-crumb" + (isLast ? " is-current" : "");
+      if (!isLast) el.type = "button";
+      if (i === 0) {
+        var icon = document.createElement("span");
+        icon.className = "dvg-crumb-icon";
+        icon.innerHTML = svgHome();
+        el.appendChild(icon);
+      }
+      var label = document.createElement("span");
+      label.textContent = b.name;
+      el.appendChild(label);
+      if (!isLast) {
+        el.addEventListener("click", function () { goToBreadcrumb(i); });
+      }
+      elBreadcrumbs.appendChild(el);
+      if (!isLast) {
+        var sep = document.createElement("span");
+        sep.className = "dvg-crumb-sep";
+        sep.innerHTML = svgChevronRight();
+        elBreadcrumbs.appendChild(sep);
+      }
+    });
+  }
+
+  function setStatus(state) {
+    elPulse.classList.remove("is-refreshing", "is-error");
+    if (state === "refreshing") elPulse.classList.add("is-refreshing");
+    if (state === "error") elPulse.classList.add("is-error");
+  }
+
+  // "Updated" only advances when the folder's actual contents changed (an item was
+  // added or removed) since the last check - not on every 60s poll - so it reads as
+  // "this is when something last changed" rather than "this is when we last looked".
+  function setUpdatedNow(items) {
+    var signature = items.map(function (i) { return i.id; }).sort().join(",");
+    if (lastItemSignature === null || signature !== lastItemSignature) {
+      lastUpdatedLabel = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date());
+    }
+    lastItemSignature = signature;
+    var itemWord = items.length === 1 ? "item" : "items";
+    elUpdated.textContent = items.length + " " + itemWord + " \u00B7 Updated " + lastUpdatedLabel;
+  }
+
+  function showError(kind, err) {
+    var messages = {
+      quota: ["Temporarily unavailable", "Google Drive's request limit was reached. This usually clears on its own \u2014 we'll keep checking automatically."],
+      notfound: ["Folder not found", "This folder couldn't be reached. Make sure it's still shared as \u201CAnyone with the link.\u201D"],
+      network: ["Connection issue", "Couldn't reach Google Drive. Check your connection \u2014 we'll keep retrying."],
+      unknown: ["Something went wrong", "An unexpected error occurred while loading this folder. We'll try again shortly."]
+    };
+    var msg = messages[kind] || messages.unknown;
+    elErrorTitle.textContent = msg[0];
+    elErrorBody.textContent = msg[1];
+    elError.hidden = false;
+    setStatus("error");
+    elUpdated.textContent = "Retrying\u2026";
+    if (err) console.error("[Media Library]", err);
+  }
+
+  function hideError() { elError.hidden = true; }
+
+  function classifyError(status, networkFailure) {
+    if (networkFailure) return "network";
+    if (status === 403) return "quota";
+    if (status === 404) return "notfound";
+    return "unknown";
+  }
+
+  /* ---------- Navigation ---------- */
+
+  function openFolder(id, name) {
+    breadcrumbs.push({ id: id, name: name });
+    currentFolderId = id;
+    searchQuery = "";
+    elSearchInput.value = "";
+    elHeading.textContent = name;
+    renderBreadcrumbs();
+    hasLoadedOnce = false;
+    lastItemSignature = null;
+    load(true);
+  }
+
+  function goToBreadcrumb(index) {
+    breadcrumbs = breadcrumbs.slice(0, index + 1);
+    currentFolderId = breadcrumbs[breadcrumbs.length - 1].id;
+    searchQuery = "";
+    elSearchInput.value = "";
+    elHeading.textContent = index === 0 ? ROOT_HEADING : breadcrumbs[breadcrumbs.length - 1].name;
+    renderBreadcrumbs();
+    hasLoadedOnce = false;
+    lastItemSignature = null;
+    load(true);
+  }
+
+  /* ---------- Modal ---------- */
+
+  function onModalKeydown(e) {
+    if (e.key === "Escape") closeModal();
+  }
+
+  var currentModalItem = null;
+
+  function openModal(item) {
+    modalOpen = true;
+    currentModalItem = item;
+    elModalTitle.textContent = item.name || "";
+    elModalIframe.src = "https://drive.google.com/file/d/" + item.id + "/preview";
+    elModalFallback.href = item.webViewLink || "#";
+    elModalDownload.href = downloadUrlFor(item);
+    elModalDownload.download = item.name || "";
+    elModalDownload.setAttribute("aria-label", "Download " + (item.name || "this file"));
+    elModalOverlay.hidden = false;
+    document.addEventListener("keydown", onModalKeydown);
+  }
+
+  function closeModal() {
+    modalOpen = false;
+    elModalOverlay.hidden = true;
+    elModalIframe.src = "";
+    document.removeEventListener("keydown", onModalKeydown);
+  }
+
+  elModalClose.addEventListener("click", closeModal);
+  elModalDownload.addEventListener("click", function (e) {
+    e.preventDefault();
+    if (currentModalItem) triggerDownload(currentModalItem);
+  });
+  elModalOverlay.addEventListener("click", function (e) {
+    if (e.target === elModalOverlay) closeModal();
+  });
+
+  /* ---------- Load cycle ---------- */
+
+  function load(isManualOrNav) {
+    if (document.hidden && hasLoadedOnce && !isManualOrNav) return;
+
+    var token = ++loadToken;
+    setStatus(hasLoadedOnce ? "refreshing" : "idle");
+    if (!hasLoadedOnce) elSkeleton.hidden = false;
+
+    var folderId = currentFolderId;
+
+    fetchChildren(folderId)
+      .then(function (items) {
+        if (token !== loadToken) return null;
+        var folders = items.filter(function (i) { return i.mimeType === FOLDER_MIME; });
+        return withConcurrency(folders, 4, function (f) {
+          return fetchFolderPreviewFrames(f).then(function (frames) { f.previewFrames = frames; });
+        }).then(function () { return items; });
+      })
+      .then(function (items) {
+        if (items === null || token !== loadToken) return;
+        hideError();
+        currentItems = items;
+        elDownloadAll.hidden = !items.some(function (i) { return i.mimeType !== FOLDER_MIME; });
+        applyFilterAndRender();
+        setStatus("idle");
+        setUpdatedNow(items);
+      })
+      .catch(function (err) {
+        if (token !== loadToken) return;
+        var kind = classifyError(err.status, !err.status);
+        showError(kind, err);
+      })
+      .finally(function () {
+        if (token !== loadToken) return;
+        hasLoadedOnce = true;
+        elSkeleton.hidden = true;
+      });
+  }
+
+  elRetry.addEventListener("click", function () { load(true); });
+
+  elDownloadAll.addEventListener("click", function () {
+    var zipName = isRoot() ? ROOT_HEADING : breadcrumbs[breadcrumbs.length - 1].name;
+    downloadFiles(currentItems.filter(function (i) { return i.mimeType !== FOLDER_MIME; }), zipName);
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) load(false);
+  });
+
+  var searchDebounce = null;
+  elSearchInput.addEventListener("input", function () {
+    var value = elSearchInput.value;
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(function () {
+      searchQuery = value;
+      applyFilterAndRender();
+    }, 120);
+  });
+
+  elViewRecent.addEventListener("click", function () { setViewMode("recent"); });
+  elViewAll.addEventListener("click", function () { setViewMode("all"); });
+  function setViewMode(mode) {
+    if (viewMode === mode) return;
+    viewMode = mode;
+    elViewRecent.classList.toggle("is-active", mode === "recent");
+    elViewAll.classList.toggle("is-active", mode === "all");
+    elViewRecent.setAttribute("aria-selected", String(mode === "recent"));
+    elViewAll.setAttribute("aria-selected", String(mode === "all"));
+    applyFilterAndRender();
+  }
+
+  elCategoryChips.forEach(function (chip) {
+    chip.addEventListener("click", function () { setCategory(chip.getAttribute("data-cat")); });
+  });
+  function setCategory(cat) {
+    if (category === cat) return;
+    category = cat;
+    elCategoryChips.forEach(function (chip) {
+      var active = chip.getAttribute("data-cat") === cat;
+      chip.classList.toggle("is-active", active);
+      chip.setAttribute("aria-selected", String(active));
+    });
+    applyFilterAndRender();
+  }
+
+  function setFavicon() {
+    if (!FAVICON_DATA_URI) return;
+    var link = document.querySelector("link[rel~='icon']");
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.type = "image/png";
+    link.href = FAVICON_DATA_URI;
+  }
+
+  setFavicon();
+  elHeading.textContent = ROOT_HEADING;
+  renderBreadcrumbs();
+  load(true);
+  setInterval(function () { load(false); }, REFRESH_INTERVAL_MS);
+})();
+</script>
