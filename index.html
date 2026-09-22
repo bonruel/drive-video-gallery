@@ -557,9 +557,10 @@
 
   /* .dvg-root prefix needed for the same reason as .dvg-card-download above -
      beats the base button reset's color/background. Sits in the white card body
-     (not the thumbnail), bottom-right. Pill widens briefly to show "Posted"/
-     "Not posted" text (.is-announcing), then settles back to an icon-only circle -
-     checked = filled green, unchecked = outlined. */
+     (not the thumbnail), bottom-right, folders only. Pill widens briefly to show
+     "Posted"/"Not posted" text (.is-announcing), then settles back to an
+     icon-only circle - checked = filled green, unchecked = outlined. Sized to
+     match .dvg-card-download (30px) for a consistent, easier-to-tap target. */
   .dvg-root .dvg-posted-toggle {
     position: absolute;
     right: 10px;
@@ -567,33 +568,34 @@
     z-index: 3;
     display: flex;
     align-items: center;
-    height: 26px;
-    min-width: 26px;
+    height: 30px;
+    min-width: 30px;
     padding: 0;
     box-sizing: border-box;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.92);
     border: 1.5px solid rgba(0,0,0,0.2);
     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-    color: #ffffff;
-    transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease;
+    color: #4b5563;
+    transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 160ms ease;
   }
   .dvg-root .dvg-posted-toggle:hover { border-color: #1fae5f; transform: translateY(-1px); }
   .dvg-root .dvg-posted-toggle.is-posted {
     background: #1fae5f;
     border-color: #1fae5f;
+    color: #ffffff;
   }
   .dvg-root .dvg-posted-toggle .dvg-posted-icon {
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
   }
   .dvg-root .dvg-posted-toggle .dvg-posted-icon svg {
-    width: 13px;
-    height: 13px;
+    width: 14px;
+    height: 14px;
     opacity: 0;
     transition: opacity 160ms ease;
   }
@@ -607,20 +609,29 @@
     font-weight: 700;
     letter-spacing: 0.01em;
     opacity: 0;
-    transition: max-width 220ms ease, opacity 160ms ease, padding-right 220ms ease;
+    transition: max-width 380ms ease, opacity 380ms ease, padding-right 380ms ease;
   }
   .dvg-root .dvg-posted-toggle.is-announcing .dvg-posted-label {
     max-width: 90px;
     padding-right: 11px;
     opacity: 1;
+    transition: max-width 200ms ease, opacity 160ms ease, padding-right 200ms ease;
   }
 
-  .dvg-card-body { position: relative; padding: 13px 46px 15px 14px; }
+  .dvg-card-body { position: relative; padding: 13px 14px 15px; }
+  .dvg-card-body.has-posted-toggle { padding-right: 50px; }
+  .dvg-card.is-leaving {
+    opacity: 0;
+    transform: scale(0.96);
+    transition: opacity 320ms ease, transform 320ms ease;
+    pointer-events: none;
+  }
   .dvg-card-name {
     font-size: 14.5px;
     font-weight: 600;
     line-height: 1.4;
     margin-bottom: 4px;
+    min-height: 2.8em;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -1449,7 +1460,7 @@
 
   var postedAnnounceTimers = new WeakMap();
 
-  function togglePosted(item, btn) {
+  function togglePosted(item, btn, card) {
     var next = !isPosted(item.id);
     setPosted(item.id, next);
 
@@ -1461,15 +1472,24 @@
     label.textContent = next ? "Posted" : "Not posted";
     btn.classList.add("is-announcing");
 
+    // Only leave the "Not Posted Yet" view once the "Posted" label has had
+    // time to show and fade - an instant re-filter would yank the card away
+    // before the user sees the confirmation.
+    var shouldLeaveView = next && isRoot() && category === "notposted";
+
     var existingTimer = postedAnnounceTimers.get(btn);
     if (existingTimer) clearTimeout(existingTimer);
     var timer = setTimeout(function () {
       btn.classList.remove("is-announcing");
-      label.textContent = "";
+      if (shouldLeaveView && card) {
+        card.classList.add("is-leaving");
+        card.addEventListener("transitionend", function onLeave() {
+          card.removeEventListener("transitionend", onLeave);
+          applyFilterAndRender();
+        });
+      }
     }, 1600);
     postedAnnounceTimers.set(btn, timer);
-
-    if (isRoot() && category === "notposted") applyFilterAndRender();
   }
 
   // Folders aren't tagged in Drive, so category is inferred from the name:
@@ -1722,22 +1742,26 @@
     body.appendChild(name);
     body.appendChild(meta);
 
-    var postedBtn = document.createElement("button");
-    postedBtn.type = "button";
-    postedBtn.className = "dvg-posted-toggle";
-    var postedNow = isPosted(item.id);
-    postedBtn.classList.toggle("is-posted", postedNow);
-    postedBtn.setAttribute("aria-pressed", String(postedNow));
-    postedBtn.setAttribute("aria-label", postedNow ? "Marked as posted. Click to unmark." : "Mark as posted");
-    postedBtn.innerHTML =
-      '<span class="dvg-posted-icon">' + svgCheckSmall() + "</span>" +
-      '<span class="dvg-posted-label"></span>';
-    postedBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      togglePosted(item, postedBtn);
-    });
-    postedBtn.addEventListener("keydown", function (e) { e.stopPropagation(); });
-    body.appendChild(postedBtn);
+    if (isFolder) {
+      body.classList.add("has-posted-toggle");
+
+      var postedBtn = document.createElement("button");
+      postedBtn.type = "button";
+      postedBtn.className = "dvg-posted-toggle";
+      var postedNow = isPosted(item.id);
+      postedBtn.classList.toggle("is-posted", postedNow);
+      postedBtn.setAttribute("aria-pressed", String(postedNow));
+      postedBtn.setAttribute("aria-label", postedNow ? "Marked as posted. Click to unmark." : "Mark as posted");
+      postedBtn.innerHTML =
+        '<span class="dvg-posted-icon">' + svgCheckSmall() + "</span>" +
+        '<span class="dvg-posted-label"></span>';
+      postedBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        togglePosted(item, postedBtn, card);
+      });
+      postedBtn.addEventListener("keydown", function (e) { e.stopPropagation(); });
+      body.appendChild(postedBtn);
+    }
 
     card.appendChild(thumbWrap);
     card.appendChild(body);
