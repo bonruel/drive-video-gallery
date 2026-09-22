@@ -59,6 +59,7 @@
         <button type="button" class="dvg-chip" id="dvgCatTour" data-cat="tour" role="tab" aria-selected="false">Property Tour</button>
         <button type="button" class="dvg-chip" id="dvgCatTalking" data-cat="talking" role="tab" aria-selected="false">Talking Head</button>
         <button type="button" class="dvg-chip" id="dvgCatTravel" data-cat="travel" role="tab" aria-selected="false">Travel Videos</button>
+        <button type="button" class="dvg-chip" id="dvgCatNotPosted" data-cat="notposted" role="tab" aria-selected="false">Not Posted Yet</button>
       </div>
 
       <div id="dvgError" class="dvg-error" hidden role="alert">
@@ -554,7 +555,67 @@
   .dvg-card:hover .dvg-chevron, .dvg-card:focus-visible .dvg-chevron { opacity: 1; transform: translateX(0); }
   .dvg-chevron svg { width: 12px; height: 12px; color: var(--dvg-text); }
 
-  .dvg-card-body { padding: 13px 14px 15px; }
+  /* .dvg-root prefix needed for the same reason as .dvg-card-download above -
+     beats the base button reset's color/background. Sits in the white card body
+     (not the thumbnail), bottom-right. Pill widens briefly to show "Posted"/
+     "Not posted" text (.is-announcing), then settles back to an icon-only circle -
+     checked = filled green, unchecked = outlined. */
+  .dvg-root .dvg-posted-toggle {
+    position: absolute;
+    right: 10px;
+    bottom: 12px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    height: 26px;
+    min-width: 26px;
+    padding: 0;
+    box-sizing: border-box;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1.5px solid rgba(0,0,0,0.2);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    color: #ffffff;
+    transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease;
+  }
+  .dvg-root .dvg-posted-toggle:hover { border-color: #1fae5f; transform: translateY(-1px); }
+  .dvg-root .dvg-posted-toggle.is-posted {
+    background: #1fae5f;
+    border-color: #1fae5f;
+  }
+  .dvg-root .dvg-posted-toggle .dvg-posted-icon {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dvg-root .dvg-posted-toggle .dvg-posted-icon svg {
+    width: 13px;
+    height: 13px;
+    opacity: 0;
+    transition: opacity 160ms ease;
+  }
+  .dvg-root .dvg-posted-toggle.is-posted .dvg-posted-icon svg { opacity: 1; }
+  .dvg-root .dvg-posted-toggle .dvg-posted-label {
+    display: block;
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    opacity: 0;
+    transition: max-width 220ms ease, opacity 160ms ease, padding-right 220ms ease;
+  }
+  .dvg-root .dvg-posted-toggle.is-announcing .dvg-posted-label {
+    max-width: 90px;
+    padding-right: 11px;
+    opacity: 1;
+  }
+
+  .dvg-card-body { position: relative; padding: 13px 46px 15px 14px; }
   .dvg-card-name {
     font-size: 14.5px;
     font-weight: 600;
@@ -899,6 +960,7 @@
   var searchQuery = "";
   var viewMode = "recent";
   var category = "all";
+  var postedMap = {};
   var previewCache = new Map();
   var hasLoadedOnce = false;
   var modalOpen = false;
@@ -1365,6 +1427,51 @@
     return svgDocument();
   }
 
+  /* ---------- Posted status (synced via /api/posted, backed by Redis) ---------- */
+
+  function loadPostedMap() {
+    return fetch("/api/posted")
+      .then(function (res) { return res.ok ? res.json() : {}; })
+      .then(function (map) { postedMap = map || {}; })
+      .catch(function () { /* keep whatever we already had */ });
+  }
+
+  function isPosted(id) { return postedMap[id] === true; }
+
+  function setPosted(id, value) {
+    postedMap[id] = value;
+    fetch("/api/posted", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id, value: value })
+    }).catch(function () { /* optimistic; next periodic refresh will reconcile */ });
+  }
+
+  var postedAnnounceTimers = new WeakMap();
+
+  function togglePosted(item, btn) {
+    var next = !isPosted(item.id);
+    setPosted(item.id, next);
+
+    btn.classList.toggle("is-posted", next);
+    btn.setAttribute("aria-pressed", String(next));
+    btn.setAttribute("aria-label", next ? "Marked as posted. Click to unmark." : "Mark as posted");
+
+    var label = btn.querySelector(".dvg-posted-label");
+    label.textContent = next ? "Posted" : "Not posted";
+    btn.classList.add("is-announcing");
+
+    var existingTimer = postedAnnounceTimers.get(btn);
+    if (existingTimer) clearTimeout(existingTimer);
+    var timer = setTimeout(function () {
+      btn.classList.remove("is-announcing");
+      label.textContent = "";
+    }, 1600);
+    postedAnnounceTimers.set(btn, timer);
+
+    if (isRoot() && category === "notposted") applyFilterAndRender();
+  }
+
   // Folders aren't tagged in Drive, so category is inferred from the name:
   // "travel" anywhere in the name -> Travel Videos; starts with a 2+ digit
   // house number (short name) -> Property Tour; everything else -> Talking Head.
@@ -1614,6 +1721,24 @@
 
     body.appendChild(name);
     body.appendChild(meta);
+
+    var postedBtn = document.createElement("button");
+    postedBtn.type = "button";
+    postedBtn.className = "dvg-posted-toggle";
+    var postedNow = isPosted(item.id);
+    postedBtn.classList.toggle("is-posted", postedNow);
+    postedBtn.setAttribute("aria-pressed", String(postedNow));
+    postedBtn.setAttribute("aria-label", postedNow ? "Marked as posted. Click to unmark." : "Mark as posted");
+    postedBtn.innerHTML =
+      '<span class="dvg-posted-icon">' + svgCheckSmall() + "</span>" +
+      '<span class="dvg-posted-label"></span>';
+    postedBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      togglePosted(item, postedBtn);
+    });
+    postedBtn.addEventListener("keydown", function (e) { e.stopPropagation(); });
+    body.appendChild(postedBtn);
+
     card.appendChild(thumbWrap);
     card.appendChild(body);
 
@@ -1661,7 +1786,9 @@
     var q = searchQuery.trim().toLowerCase();
     var list = currentItems.slice();
 
-    if (isRoot() && category !== "all") {
+    if (isRoot() && category === "notposted") {
+      list = list.filter(function (i) { return i.mimeType === FOLDER_MIME && !isPosted(i.id); });
+    } else if (isRoot() && category !== "all") {
       list = list.filter(function (i) { return classifyCategory(i.name) === category; });
     }
     if (q) {
@@ -1910,7 +2037,11 @@
   setFavicon();
   elHeading.textContent = ROOT_HEADING;
   renderBreadcrumbs();
+  loadPostedMap().then(function () { applyFilterAndRender(); });
   load(true);
-  setInterval(function () { load(false); }, REFRESH_INTERVAL_MS);
+  setInterval(function () {
+    load(false);
+    loadPostedMap().then(function () { applyFilterAndRender(); });
+  }, REFRESH_INTERVAL_MS);
 })();
 </script>
