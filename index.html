@@ -592,6 +592,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: width 380ms ease;
+  }
+  /* The checkmark is invisible while unchecked, so its 30px slot would
+     otherwise leave a wide empty gap before the "Not posted" label - shrink
+     it to a small dot of padding instead so the pill hugs the text. */
+  .dvg-root .dvg-posted-toggle.is-announcing:not(.is-posted) .dvg-posted-icon {
+    width: 12px;
+    transition: width 200ms ease;
   }
   .dvg-root .dvg-posted-toggle .dvg-posted-icon svg {
     width: 14px;
