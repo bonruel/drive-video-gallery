@@ -60,6 +60,7 @@
         <button type="button" class="dvg-chip" id="dvgCatTalking" data-cat="talking" role="tab" aria-selected="false">Talking Head</button>
         <button type="button" class="dvg-chip" id="dvgCatTravel" data-cat="travel" role="tab" aria-selected="false">Travel Videos</button>
         <button type="button" class="dvg-chip" id="dvgCatNotPosted" data-cat="notposted" role="tab" aria-selected="false">Not Posted Yet</button>
+        <button type="button" class="dvg-chip" id="dvgCatNotOptimized" data-cat="notoptimized" role="tab" aria-selected="false">Not Optimized</button>
       </div>
 
       <div id="dvgError" class="dvg-error" hidden role="alert">
@@ -1022,6 +1023,7 @@
   var viewMode = "all";
   var category = "all";
   var postedMap = {};
+  var optimizedMap = {};
   var previewCache = new Map();
   var hasLoadedOnce = false;
   var modalOpen = false;
@@ -1490,42 +1492,62 @@
 
   /* ---------- Posted status (synced via /api/posted, backed by Redis) ---------- */
 
-  function loadPostedMap() {
-    return fetch("/api/posted")
-      .then(function (res) { return res.ok ? res.json() : {}; })
-      .then(function (map) { postedMap = map || {}; })
+  function loadFlagMap(kind) {
+    return fetch("/api/posted?kind=" + kind)
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (map) { if (map) { if (kind === "optimized") optimizedMap = map; else postedMap = map; } })
       .catch(function () { /* keep whatever we already had */ });
   }
 
-  function isPosted(id) { return postedMap[id] === true; }
+  function loadPostedMap() {
+    return Promise.all([loadFlagMap("posted"), loadFlagMap("optimized")]);
+  }
 
-  function setPosted(id, value) {
-    postedMap[id] = value;
+  function isPosted(id) { return postedMap[id] === true; }
+  function isOptimized(id) { return optimizedMap[id] === true; }
+
+  // The folder checkbox means "posted" everywhere except the Not Optimized
+  // view, where it means "optimized".
+  function toggleKind() {
+    return isRoot() && category === "notoptimized" ? "optimized" : "posted";
+  }
+
+  function flagOn(kind, id) { return kind === "optimized" ? isOptimized(id) : isPosted(id); }
+
+  var TOGGLE_TEXT = {
+    posted: { on: "Posted", off: "Not posted", markedLabel: "Marked as posted. Click to unmark.", unmarkedLabel: "Mark as posted" },
+    optimized: { on: "Optimized", off: "Not optimized", markedLabel: "Marked as optimized. Click to unmark.", unmarkedLabel: "Mark as optimized" }
+  };
+
+  function setFlag(kind, item, value) {
+    (kind === "optimized" ? optimizedMap : postedMap)[item.id] = value;
     fetch("/api/posted", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: id, value: value })
+      body: JSON.stringify({ id: item.id, value: value, kind: kind, name: item.name || "" })
     }).catch(function () { /* optimistic; next periodic refresh will reconcile */ });
   }
 
   var postedAnnounceTimers = new WeakMap();
 
   function togglePosted(item, btn, card) {
-    var next = !isPosted(item.id);
-    setPosted(item.id, next);
+    var kind = toggleKind();
+    var text = TOGGLE_TEXT[kind];
+    var next = !flagOn(kind, item.id);
+    setFlag(kind, item, next);
 
     btn.classList.toggle("is-posted", next);
     btn.setAttribute("aria-pressed", String(next));
-    btn.setAttribute("aria-label", next ? "Marked as posted. Click to unmark." : "Mark as posted");
+    btn.setAttribute("aria-label", next ? text.markedLabel : text.unmarkedLabel);
 
     var label = btn.querySelector(".dvg-posted-label");
-    label.textContent = next ? "Posted" : "Not posted";
+    label.textContent = next ? text.on : text.off;
     btn.classList.add("is-announcing");
 
-    // Only leave the "Not Posted Yet" view once the "Posted" label has had
-    // time to show and fade - an instant re-filter would yank the card away
-    // before the user sees the confirmation.
-    var shouldLeaveView = next && isRoot() && category === "notposted";
+    // Only leave the filtered view once the confirmation label has had time
+    // to show and fade - an instant re-filter would yank the card away
+    // before the user sees it.
+    var shouldLeaveView = next && isRoot() && (category === "notposted" || category === "notoptimized");
 
     var existingTimer = postedAnnounceTimers.get(btn);
     if (existingTimer) clearTimeout(existingTimer);
@@ -1798,10 +1820,11 @@
       var postedBtn = document.createElement("button");
       postedBtn.type = "button";
       postedBtn.className = "dvg-posted-toggle";
-      var postedNow = isPosted(item.id);
+      var kindNow = toggleKind();
+      var postedNow = flagOn(kindNow, item.id);
       postedBtn.classList.toggle("is-posted", postedNow);
       postedBtn.setAttribute("aria-pressed", String(postedNow));
-      postedBtn.setAttribute("aria-label", postedNow ? "Marked as posted. Click to unmark." : "Mark as posted");
+      postedBtn.setAttribute("aria-label", postedNow ? TOGGLE_TEXT[kindNow].markedLabel : TOGGLE_TEXT[kindNow].unmarkedLabel);
       postedBtn.innerHTML =
         '<span class="dvg-posted-icon">' + svgCheckSmall() + "</span>" +
         '<span class="dvg-posted-label"></span>';
@@ -1860,6 +1883,8 @@
 
     if (isRoot() && category === "notposted") {
       list = list.filter(function (i) { return i.mimeType === FOLDER_MIME && !isPosted(i.id); });
+    } else if (isRoot() && category === "notoptimized") {
+      list = list.filter(function (i) { return i.mimeType === FOLDER_MIME && isPosted(i.id) && !isOptimized(i.id); });
     } else if (isRoot() && category !== "all") {
       list = list.filter(function (i) { return classifyCategory(i.name) === category; });
     }
